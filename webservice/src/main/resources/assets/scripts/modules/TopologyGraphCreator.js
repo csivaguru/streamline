@@ -139,6 +139,7 @@ define(['require',
 			thisGraph.nodeParentType = obj.parentStep;
 			thisGraph.currentStep = obj.currentStep;
 			thisGraph.icon = obj.icon;
+			thisGraph.nodeId = obj.id;
 			d3.event = obj.event;
 			thisGraph.createNode();
 		});
@@ -396,7 +397,13 @@ define(['require',
 					// thisGraph.selectElementContents(txtNode);
 					// txtNode.focus();
 				} else {
-					thisGraph.vent.trigger('click:topologyNode', {parentType: d.parentType, currentType: d.currentType});
+					thisGraph.vent.trigger('click:topologyNode', 
+						{
+							parentType: d.parentType, 
+							currentType: d.currentType, 
+							nodeId: d.nodeId
+						}
+					);
 				}
 			}
 		}
@@ -447,7 +454,8 @@ define(['require',
 				y: xycoords[1],
 				parentType: thisGraph.nodeParentType,
 				currentType: thisGraph.currentStep,
-				icon: thisGraph.icon
+				icon: thisGraph.icon,
+				nodeId: thisGraph.nodeId
 			};
 		thisGraph.nodes.push(d);
 		thisGraph.updateGraph();

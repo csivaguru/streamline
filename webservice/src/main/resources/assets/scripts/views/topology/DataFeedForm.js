@@ -11,6 +11,7 @@ define(['utils/LangSupport',
     template: tmpl,
 
     initialize: function (options) {
+      _.extend(this, options);
       this.collection = new VDatasourceList();
       Backbone.Form.prototype.initialize.call(this, options);
       this.bindEvents();
@@ -63,27 +64,14 @@ define(['utils/LangSupport',
           },
           validators: ['required']
         },
-        // parserName: {
-        //   type: 'Text',
-        //   title: localization.tt('lbl.parserName')+'*',
-        //   editorClass: 'form-control',
-        //   placeHolder: localization.tt('lbl.parserName'),
-        //   validators: [{'type':'required','message':'Parser name can not be blank.'}]
-        // },
-        // parserId: {
-        //   type: 'Number',
-        //   title: localization.tt('lbl.parserId')+'*',
-        //   editorClass: 'form-control',
-        //   placeHolder: localization.tt('lbl.parserId'),
-        //   validators: [{'type':'required','message':'Parser id can not be blank.'}]
-        // }
       };
     },
 
     onRender: function(){},
 
     getData: function() {
-      return this.getValue();
+      var attrs = this.getValue();
+      return this.model.set(attrs);
     },
 
     close: function() {

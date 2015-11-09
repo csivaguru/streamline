@@ -41,7 +41,7 @@ define(['require',
         var model = new Backbone.Model();
         model.set('dataStreamName', 'Topology '+i);
         model.set('dataStreamId', i);
-        model.set('state', 'Topology 1');
+        model.set('state', 'Submitted');
         model.set('timestamp', new Date());
         this.collection.add(model);
       }

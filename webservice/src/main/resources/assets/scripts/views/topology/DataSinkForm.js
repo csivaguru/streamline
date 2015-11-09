@@ -95,7 +95,8 @@ define(['utils/LangSupport',
     },
 
     getData: function() {
-      return this.getValue();
+      var attrs = this.getValue();
+      return this.model.set(attrs);
     },
 
     close: function() {

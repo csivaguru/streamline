@@ -15,7 +15,6 @@ define(['require',
     template: tmpl,
 
     events: {
-      // 'click .quick-button'       : 'evClickSubMenu',
       'click #submitDatastream'   : 'evSubmitAction',
       'click #deployDatastream'   : 'evDeployAction',
       'click #killDatastream'     : 'evKillAction'
@@ -25,8 +24,6 @@ define(['require',
       'btnDS'         : '#btnDS',
       'btnProcessor'  : '#btnProcessor',
       'btnDataSink'   : '#btnDataSink',
-      // 'btnSubmit'     : '#submitDatastream',
-      // 'btnDeploy'     : '#deployDatastream',
       'editorSubMenu' : '#editorSubhead',
       'graphEditor'   : '#graphEditor'
     },
@@ -34,8 +31,19 @@ define(['require',
     initialize: function(options) {
       _.extend(this, options);
       this.tempCount = 1;
+      this.dsCount = 0;
+      this.pCount = 0;
+      this.sCount = 0;
+      this.dsArr = [];
+      this.processorArr = [];
+      this.sinkArr = [];
       if(!this.model){
         this.model = new VTopology();
+        this.model.set('catalogRootUrl', window.location.origin+'/api/v1/catalog');
+        this.model.set('dataSources', []);
+        this.model.set('processors', []);
+        this.model.set('dataSinks', []);
+        this.model.set('links', []);
       }
       this.vent = Vent;
       this.bindEvents();
@@ -43,22 +51,43 @@ define(['require',
 
     bindEvents: function(){
       var self = this;
+      
       this.listenTo(this.vent, 'dataStream:SavedStep1', function(data){
         self.step1Data = data;
+        self.dsArr.push(data.toJSON());
       });
+      
       this.listenTo(this.vent, 'dataStream:SavedStep2', function(data){
         self.step2Data = data;
+        self.processorArr.push(data);
       });
+      
       this.listenTo(this.vent, 'dataStream:SavedStep3', function(data){
         self.step3Data = data;
+        self.sinkArr.push(data.toJSON());
       });
+
       this.listenTo(this.vent, 'click:topologyNode', function(data){
+        var model = new Backbone.Model();
+        var nodeId = data.nodeId;
         if(_.isEqual(data.parentType, Globals.Topology.Editor.Steps.Datasource.valStr)){
-          self.evDSAction();
+          if(this.dsArr[nodeId]){
+            model.set(this.dsArr[nodeId]);
+            model.set('_nodeId',nodeId);
+          }
+          self.evDSAction(model);
         } else if(_.isEqual(data.parentType, Globals.Topology.Editor.Steps.Processor.valStr)){
-          self.evProcessorAction();
+          if(this.processorArr[nodeId]){
+            model.set(this.processorArr[nodeId]);
+            model.set('_nodeId',nodeId);
+          }
+          self.evProcessorAction(model);
         } else if(_.isEqual(data.parentType, Globals.Topology.Editor.Steps.DataSink.valStr)){
-          self.evDataSinkAction(data.currentType);
+          if(this.sinkArr[nodeId]){
+            model.set(this.sinkArr[nodeId]);
+            model.set('_nodeId',nodeId);
+          }
+          self.evDataSinkAction(model, data.currentType);
         }
       });
     },
@@ -146,14 +175,24 @@ define(['require',
       setTimeout(function(){
         self.$('#graphEditor svg').droppable({
             drop: function(event, ui){
-              var mainMenu = ui.helper.data().mainmenu.split(' ').join('');
+              var mainmenu = ui.helper.data().mainmenu.split(' ').join('');
               var submenu = ui.helper.data().submenu;
-              var icon = _.findWhere(Globals.Topology.Editor.Steps[mainMenu].Substeps, {valStr:submenu});
+              var icon = _.findWhere(Globals.Topology.Editor.Steps[mainmenu].Substeps, {valStr:submenu});
+              var id;
+              if(_.isEqual(mainmenu, Globals.Topology.Editor.Steps.Datasource.valStr)){
+                id = self.dsCount++;
+              } else if(_.isEqual(mainmenu, Globals.Topology.Editor.Steps.Processor.valStr)){
+                id = self.pCount++;
+              } else if(_.isEqual(ui.helper.data().mainmenu, Globals.Topology.Editor.Steps.DataSink.valStr)){
+                id = self.sCount++;
+              }
+
               self.vent.trigger('change:editor-submenu', {
                 title: submenu,
                 parentStep: ui.helper.data().mainmenu,
                 icon: submenu ? icon.iconContent : '',
                 currentStep: submenu,
+                id: id,
                 event: event
               });
             }
@@ -175,46 +214,29 @@ define(['require',
       graph.updateGraph();
     },
 
-    evClickSubMenu: function(e){
-      // if($(e.currentTarget).hasClass('active')){
-      //   this.selSubStep = undefined;
-      //   $(e.currentTarget).removeClass('active');
-      // } else {
-      //   this.selSubStep = e.currentTarget.dataset.submenu;
-      //   $(e.currentTarget).siblings('.active').removeClass('active');
-      //   $(e.currentTarget).addClass('active');
-      // }
-
-      // var mainMenu = e.currentTarget.dataset.mainmenu.split(' ').join('');
-      // var icon = _.findWhere(Globals.Topology.Editor.Steps[mainMenu].Substeps, {valStr:this.selSubStep});
-      // this.vent.trigger('change:editor-submenu', {
-      //   title: this.selSubStep,
-      //   parentStep: e.currentTarget.dataset.mainmenu,
-      //   icon: this.selSubStep ? icon.iconContent : '',
-      //   currentStep: this.selSubStep
-      // });
-    },
-
-    evDSAction: function(e){
+    evDSAction: function(model){
       var self = this;
       require(['views/topology/DataFeedView'], function(DataFeedView){
         self.showModal(new DataFeedView({
+          model: model,
           vent: self.vent
         }), 'Source');
       });
     },
-    evProcessorAction: function(e){
+    evProcessorAction: function(model){
       var self = this;
       require(['views/topology/DataProcessorView'], function(DataProcessorView){
         self.showModal(new DataProcessorView({
+          model: model,
           vent: self.vent
         }), 'Processor');
       });
     },
-    evDataSinkAction: function(type){
+    evDataSinkAction: function(model, type){
       var self = this;
       require(['views/topology/DataSinkView'], function(DataSinkView){
         self.showModal(new DataSinkView({
+          model: model,
           vent: self.vent,
           type: type
         }), 'Sink');
@@ -242,99 +264,98 @@ define(['require',
 
     evSubmitAction: function(e){
       var self = this;
-      var data = {
-                  "catalogRootUrl": window.location.origin+"/api/v1/catalog",
-                  "dataSources": [
-                    { 
-                      "uiname": "kafkaDataSource",
-                      "id": 1,
-                      "type": "KAFKA",
-                      "config": {
-                        "zkUrl": "localhost:2181",
-                        "topic": "nest-topic"
-                      }
-                    }
-                  ],
+      // var data = {
+      //             "dataSources": [
+      //               { 
+      //                 "uiname": "kafkaDataSource",
+      //                 "id": 1,
+      //                 "type": "KAFKA",
+      //                 "config": {
+      //                   "zkUrl": "localhost:2181",
+      //                   "topic": "nest-topic"
+      //                 }
+      //               }
+      //             ],
                   
-                  "processors": [
-                    {
-                      "uiname": "tuplesProcessor",
-                      "config": [
-                        {
-                          "uiname": "goodTuplesRule",
-                          "type": "RULE",
-                          "id": 1,
-                          "config": {
-                            "ruleName": "successful-tuples"
-                          }
-                        },
-                        {
-                          "uiname": "badTuplesRule",
-                          "type": "RULE",
-                          "id": 2,
-                          "config": {
-                            "ruleName": "failed-tuples"
-                          }
-                        }
-                      ]
-                    }
-                  ],
+      //             "processors": [
+      //               {
+      //                 "uiname": "tuplesProcessor",
+      //                 "config": [
+      //                   {
+      //                     "uiname": "goodTuplesRule",
+      //                     "type": "RULE",
+      //                     "id": 1,
+      //                     "config": {
+      //                       "ruleName": "successful-tuples"
+      //                     }
+      //                   },
+      //                   {
+      //                     "uiname": "badTuplesRule",
+      //                     "type": "RULE",
+      //                     "id": 2,
+      //                     "config": {
+      //                       "ruleName": "failed-tuples"
+      //                     }
+      //                   }
+      //                 ]
+      //               }
+      //             ],
                  
-                  "dataSinks": [
-                    {
-                      "uiname": "hbasesink",
-                      "type": "HBASE",
-                      "config": {
-                        "rootDir": "hdfs://localhost:9000/hbase",
-                        "table": "nest",
-                        "columnFamily": "cf",
-                        "rowKey": "device_id"
-                      }
-                    },
-                    {
-                      "uiname": "hdfssink",
-                      "type": "HDFS",
-                      "config": {
-                        "fsUrl": "file:///",
-                        "path": "/tmp/failed-tuples",
-                        "name": "data"
-                      }
-                    }
-                  ],
+      //             "dataSinks": [
+      //               {
+      //                 "uiname": "hbasesink",
+      //                 "type": "HBASE",
+      //                 "config": {
+      //                   "rootDir": "hdfs://localhost:9000/hbase",
+      //                   "table": "nest",
+      //                   "columnFamily": "cf",
+      //                   "rowKey": "device_id"
+      //                 }
+      //               },
+      //               {
+      //                 "uiname": "hdfssink",
+      //                 "type": "HDFS",
+      //                 "config": {
+      //                   "fsUrl": "file:///",
+      //                   "path": "/tmp/failed-tuples",
+      //                   "name": "data"
+      //                 }
+      //               }
+      //             ],
                   
-                  "links": [
-                    {
-                      "uiname": "kafkaDataSource->tuplesProcessor",
-                      "from": "kafkaDataSource",
-                      "to": "tuplesProcessor"
-                    },
-                    {
-                      "uiname": "tuplesProcessor-goodTuplesRule->hbasesink",
-                      "from": "goodTuplesRule",
-                      "to": "hbasesink"
-                    },
-                    {
-                      "uiname": "tuplesProcessor-badTuplesRule->hdfssink",
-                      "from": "badTuplesRule",
-                      "to": "hdfssink"
-                    }
-                  ]
-              };
-      var tData = JSON.stringify(data);
-      this.model.set({
-        dataStreamName: 'topology'+this.tempCount++,
-        json: tData
-      });
-      this.model.save({},{
-        success: function(model, response, options){
-          self.dataStreamId = response.entity.dataStreamId;
-          self.$('#deployDatastream').removeAttr('disabled');
-          Utils.notifySuccess('Topology submitted successfully.');
-        },
-        error: function(model, response, options){
-          Utils.showError(model, response);
-        }
-      });
+      //             "links": [
+      //               {
+      //                 "uiname": "kafkaDataSource->tuplesProcessor",
+      //                 "from": "kafkaDataSource",
+      //                 "to": "tuplesProcessor"
+      //               },
+      //               {
+      //                 "uiname": "tuplesProcessor-goodTuplesRule->hbasesink",
+      //                 "from": "goodTuplesRule",
+      //                 "to": "hbasesink"
+      //               },
+      //               {
+      //                 "uiname": "tuplesProcessor-badTuplesRule->hdfssink",
+      //                 "from": "badTuplesRule",
+      //                 "to": "hdfssink"
+      //               }
+      //             ]
+      //         };
+      // var tData = JSON.stringify(data);
+      // this.model.set({
+      //   dataStreamName: 'topology'+this.tempCount++,
+      //   json: tData
+      // });
+      // this.model.save({},{
+      //   success: function(model, response, options){
+      //     self.dataStreamId = response.entity.dataStreamId;
+      //     self.$('#deployDatastream').removeAttr('disabled');
+      //     Utils.notifySuccess('Topology submitted successfully.');
+      //   },
+      //   error: function(model, response, options){
+      //     Utils.showError(model, response);
+      //   }
+      // });
     },
     evDeployAction: function(e){
       if(this.dataStreamId){

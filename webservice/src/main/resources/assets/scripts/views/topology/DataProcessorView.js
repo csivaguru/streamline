@@ -28,12 +28,39 @@ define(['require',
     bindEvents: function(){
       var self = this;
       this.listenTo(this.vent, 'change:Formula', function(data){
-        self.generateForumla(data);
+        self.generateForumla(data.models);
       });
     },
 
-    generateForumla: function(obj){
-      console.log(obj);
+    generateForumla: function(models){
+      var self = this;
+      var msg = '';
+      _.each(models, function(model){
+        if(model.has('logical')){
+          msg += '<span class="formulaLogical"> '+model.get('logical')+' </span>';
+        } else if(!model.has('firstModel')){
+          msg += '<span class="formulaError"> Missing Operator </span>';
+        }
+        
+        if(model.has('field1')){
+          msg += '<span class="formulaField">('+model.get('field1')+')</span>';
+        } else {
+          msg += '<span class="formulaError"> (Missing Field) </span>';
+        }
+        
+        if(model.has('comp')){
+          msg += '<span class="formulaComparison"> '+model.get('comp')+' </span>';
+        } else {
+          msg += '<span class="formulaError"> Missing Operator </span>';
+        }
+
+        if(model.has('field2')){
+          msg += '<span class="formulaField">('+model.get('field2')+')</span>';
+        } else {
+          msg += '<span class="formulaError"> (Missing Field) </span>';
+        }
+      });
+      this.$('#previewFormula').html(msg);
     },
 
     onRender:function(){

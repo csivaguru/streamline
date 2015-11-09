@@ -16,7 +16,6 @@ define(['require',
         },
         events: {
             'click .btnDelete': 'evDelete',
-            'change .ruleRow': 'evChange'
         },
 
         initialize: function(options) {
@@ -27,17 +26,8 @@ define(['require',
 
         },
 
-        evChange: function(e){
-            var currentTarget = $(e.currentTarget); 
-            this.vent.trigger('change:Formula', {
-                rowType: currentTarget.data().rowtype,
-                value: currentTarget.val(),
-                rowNum: currentTarget.data().row
-            });
-        },
-
         evDelete: function() {
-            this.model.destroy();
+            this.collection.remove(this.model.id);
         }
     });
 });
