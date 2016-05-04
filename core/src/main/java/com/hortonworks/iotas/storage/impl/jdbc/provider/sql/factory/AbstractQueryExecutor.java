@@ -7,6 +7,7 @@ import com.google.common.cache.RemovalNotification;
 import com.hortonworks.iotas.catalog.DataFeed;
 import com.hortonworks.iotas.catalog.DataSource;
 import com.hortonworks.iotas.catalog.Device;
+import com.hortonworks.iotas.catalog.NotifierInfo;
 import com.hortonworks.iotas.catalog.ParserInfo;
 import com.hortonworks.iotas.catalog.Tag;
 import com.hortonworks.iotas.catalog.TagStorableMapping;
@@ -299,6 +300,8 @@ public abstract class AbstractQueryExecutor implements QueryExecutor {
                     return (T) new Tag();
                 case (TagStorableMapping.NAMESPACE):
                     return (T) new TagStorableMapping();
+                case (NotifierInfo.NAMESPACE):
+                    return (T) new NotifierInfo();
                 default:
                     log.error("Storable for namespace [{}] is not registered", nameSpace);
                     throw new RuntimeException("Unsupported Storable type: "+nameSpace);

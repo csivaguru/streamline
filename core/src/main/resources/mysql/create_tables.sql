@@ -91,3 +91,14 @@ CREATE TABLE IF NOT EXISTS tag_storable_mapping (
     storableId BIGINT NOT NULL,
     PRIMARY KEY (tagId, storableNamespace, storableId)
 );
+
+CREATE TABLE IF NOT EXISTS notifierinfos (
+     id BIGINT AUTO_INCREMENT NOT NULL,
+     name VARCHAR(256) NOT NULL,
+     jarFileName TEXT NOT NULL,
+     className TEXT NOT NULL,
+     timestamp  BIGINT,
+     properties TEXT,
+     fieldValues TEXT,
+     PRIMARY KEY (id)
+);
