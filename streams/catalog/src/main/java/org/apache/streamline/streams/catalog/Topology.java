@@ -6,6 +6,7 @@ import org.apache.streamline.storage.PrimaryKey;
 import org.apache.streamline.storage.Storable;
 import org.apache.streamline.storage.StorableKey;
 import org.apache.streamline.streams.layout.component.TopologyDag;
+import com.google.common.base.Preconditions;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -134,6 +135,17 @@ public class Topology implements Storable {
 
     public void setTimestamp (Long timestamp) {
         this.timestamp = timestamp;
+    }
+
+    @JsonIgnore
+    public Topology getClone(String cloneName) {
+        Preconditions.checkNotNull(cloneName);
+
+        Topology newTopology = new Topology();
+        newTopology.setConfig(config);
+        newTopology.setName(cloneName);
+
+        return newTopology;
     }
 
     @Override

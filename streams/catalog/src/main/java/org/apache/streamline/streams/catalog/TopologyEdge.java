@@ -26,6 +26,7 @@ import org.apache.streamline.storage.PrimaryKey;
 import org.apache.streamline.storage.catalog.AbstractStorable;
 import org.apache.commons.lang3.StringUtils;
 
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -40,15 +41,27 @@ public class TopologyEdge extends AbstractStorable {
         private List<String> fields;
 
         // for jackson
-        private StreamGrouping() {
+        public StreamGrouping() {
+        }
+
+        public void setStreamId(Long streamId) {
+            this.streamId = streamId;
         }
 
         public Long getStreamId() {
             return streamId;
         }
 
+        public void setGrouping(Grouping grouping) {
+            this.grouping = grouping;
+        }
+
         public Grouping getGrouping() {
             return grouping;
+        }
+
+        public void setFields(List<String> fields) {
+            this.fields = new ArrayList<>(fields);
         }
 
         public List<String> getFields() {

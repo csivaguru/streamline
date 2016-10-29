@@ -17,8 +17,12 @@
  */
 package org.apache.streamline.streams.layout.component;
 
+import com.google.common.base.Function;
+import com.google.common.collect.Collections2;
 import com.google.common.collect.Sets;
+import org.apache.commons.collections.map.HashedMap;
 
+import java.io.OutputStream;
 import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -40,6 +44,18 @@ public class TopologyDag implements Serializable {
     private final Set<InputComponent> inputComponents = new HashSet<>();
 
     private final Map<OutputComponent, List<Edge>> dag = new LinkedHashMap<>();
+
+    public TopologyDag add(Component component) {
+        if (component instanceof Processor) {
+            add((Processor) component);
+        } else if (component instanceof InputComponent) {
+            add((InputComponent) component);
+        } else if (component instanceof OutputComponent){
+            add((OutputComponent) component);
+        }
+
+        return this;
+    }
 
     public TopologyDag add(OutputComponent component) {
         outputComponents.add(component);

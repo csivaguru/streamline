@@ -35,6 +35,11 @@ public class TopologyDagBuilder {
         }
     }
 
+    public TopologyComponentFactory getFactory() {
+        return factory;
+    }
+
+
     private void addSources(TopologyDag dag, Topology topology) throws Exception {
         for (TopologySource topologySource : catalogService.listTopologySources(queryParam(topology))) {
             dag.add(factory.getStreamlineSource(topologySource));

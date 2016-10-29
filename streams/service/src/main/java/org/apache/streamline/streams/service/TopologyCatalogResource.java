@@ -535,8 +535,25 @@ public class TopologyCatalogResource {
         }
     }
 
+    @POST
+    @Path("/topologies/{topologyId}/actions/clone/{cloneName}")
+    @Timed
+    public Response cloneTopology (@PathParam("topologyId") Long topologyId, @PathParam("cloneName") String cloneName) {
+        try {
+            Topology originalTopology = catalogService.getTopology(topologyId);
+            if (originalTopology != null) {
+                Topology clonedTopology = catalogService.cloneTopology(originalTopology, cloneName);
+                return WSUtils.respond(clonedTopology, OK, SUCCESS);
+            } else {
+                return WSUtils.respond(NOT_FOUND, ENTITY_NOT_FOUND, topologyId.toString());
+            }
+        } catch (Exception ex) {
+            return WSUtils.respond(INTERNAL_SERVER_ERROR, EXCEPTION, ex.getMessage());
+        }
+    }
+
     private List<TopologyCatalogWithMetric> enrichMetricToTopologies(
-        Collection<Topology> topologies) {
+            Collection<Topology> topologies) {
         // need to also provide Topology Metric
         List<TopologyCatalogWithMetric> topologiesWithMetric = new ArrayList<>(topologies.size());
         for (Topology topology : topologies) {

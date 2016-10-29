@@ -14,12 +14,14 @@ import org.apache.streamline.streams.catalog.TopologySink;
 import org.apache.streamline.streams.catalog.TopologySource;
 import org.apache.streamline.streams.catalog.WindowInfo;
 import org.apache.streamline.streams.catalog.service.StreamCatalogService;
+import org.apache.streamline.streams.layout.component.Component;
 import org.apache.streamline.streams.layout.component.Edge;
 import org.apache.streamline.streams.layout.component.InputComponent;
 import org.apache.streamline.streams.layout.component.StreamlineComponent;
 import org.apache.streamline.streams.layout.component.StreamlineProcessor;
 import org.apache.streamline.streams.layout.component.StreamlineSink;
 import org.apache.streamline.streams.layout.component.StreamlineSource;
+import org.apache.streamline.streams.layout.component.TopologyDag;
 import org.apache.streamline.streams.layout.component.OutputComponent;
 import org.apache.streamline.streams.layout.component.Stream;
 import org.apache.streamline.streams.layout.component.StreamGrouping;
@@ -40,6 +42,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -64,6 +67,7 @@ public class TopologyComponentFactory {
     private static final Logger LOG = LoggerFactory.getLogger(TopologyComponentFactory.class);
 
     private final Map<Class<?>, Map<String, ?>> providerMap;
+    private final Map<Class<?>, Cloner<?>> clonerMap;
     private final StreamCatalogService catalogService;
 
     public TopologyComponentFactory(StreamCatalogService catalogService) {
@@ -73,6 +77,7 @@ public class TopologyComponentFactory {
         builder.put(StreamlineProcessor.class, createProcessorProviders());
         builder.put(StreamlineSink.class, createSinkProviders());
         providerMap = builder.build();
+        clonerMap = createClonerMap();
     }
 
     public StreamlineSource getStreamlineSource(TopologySource topologySource) {
@@ -119,6 +124,68 @@ public class TopologyComponentFactory {
         edge.addStreamGroupings(streamGroupings);
         return edge;
     }
+
+    public Component clone(Component component, Long topologyId) {
+        if (component instanceof StreamlineComponent) {
+            StreamlineComponent streamlineComponent = (StreamlineComponent) component;
+            Cloner<Component> componentCloner = getCloner(streamlineComponent);
+            return componentCloner.clone(component, catalogService, topologyId);
+        } else {
+            throw new RuntimeException("Cloning is supported only for Iotas Components");
+        }
+    }
+
+    public void copyDag(TopologyDag originalTopologyDag, TopologyDag clonedTopologyDag, Long clonedTopologyId) {
+        Map<Component, Component> componentMapping = new HashMap<>();
+        for (Component originalComponent : originalTopologyDag.getComponents()) {
+            Component clonedComponent = clone(originalComponent, clonedTopologyId);
+            clonedTopologyDag.add(clonedComponent);
+            componentMapping.put(originalComponent, clonedComponent);
+        }
+
+        for (Edge edge : originalTopologyDag.getAllEdges()) {
+            TopologyEdge newTopologyEdge = new TopologyEdge();
+            newTopologyEdge.setFromId(Long.parseLong(edge.getFrom().getId()));
+            newTopologyEdge.setToId(Long.parseLong(edge.getTo().getId()));
+            newTopologyEdge.setTopologyId(clonedTopologyId);
+            List<TopologyEdge.StreamGrouping> clonedStreamGroupings = new ArrayList<>();
+            for (org.apache.streamline.streams.layout.component.StreamGrouping streamGrouping : edge.getStreamGroupings()) {
+                TopologyEdge.StreamGrouping newStreamGrouping = new TopologyEdge.StreamGrouping();
+                newStreamGrouping.setStreamId(Long.parseLong(streamGrouping.getStream().getId()));
+                newStreamGrouping.setGrouping(streamGrouping.getGrouping());
+                newStreamGrouping.setFields(streamGrouping.getFields());
+                clonedStreamGroupings.add(newStreamGrouping);
+            }
+            newTopologyEdge.setStreamGroupings(clonedStreamGroupings);
+            catalogService.addTopologyEdge(clonedTopologyId, newTopologyEdge);
+            clonedTopologyDag.addEdge(getStreamlineEdge(newTopologyEdge));
+        }
+    }
+    private <T extends Component> Cloner<T> getCloner(StreamlineComponent component) {
+        Class componentClass = component.getClass();
+        while (componentClass != null) {
+            if (clonerMap.containsKey(componentClass)) {
+                return (Cloner<T>) clonerMap.get(componentClass);
+            }
+            componentClass = componentClass.getSuperclass();
+        }
+
+        throw new RuntimeException(
+                String.format(
+                        "Cloning of component %s of type %s is not supported",
+                        component.getId(),
+                        component.getClass()));
+    }
+
+    private Map<Class<?>, Cloner<?>> createClonerMap() {
+        ImmutableMap.Builder<Class<?>, Cloner<?>> clonerMap = ImmutableMap.builder();
+        clonerMap.put(StreamlineProcessor.class, new StreamlineProcessorCloner());
+        clonerMap.put(RulesProcessor.class, new RulesProcessorCloner());
+        clonerMap.put(StreamlineSink.class, new StreamlineSinkCloner());
+        clonerMap.put(StreamlineSource.class, new StreamlineSourceCloner());
+
+        return clonerMap.build();
+    };
 
     private OutputComponent getOutputComponent(TopologyEdge topologyEdge) {
         TopologySource topologySource;

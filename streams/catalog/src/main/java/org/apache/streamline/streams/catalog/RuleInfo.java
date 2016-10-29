@@ -178,6 +178,21 @@ public class RuleInfo extends AbstractStorable {
     }
 
     @JsonIgnore
+    public RuleInfo getClone(Long topologyId) {
+        RuleInfo ruleInfo = new RuleInfo();
+        ruleInfo.setTopologyId(topologyId);
+        ruleInfo.setName(name);
+        ruleInfo.setDescription(description);
+        ruleInfo.setStreams(streams);
+        ruleInfo.setCondition(condition);
+        ruleInfo.setParsedRuleStr(parsedRuleStr);
+        ruleInfo.setWindow(window);
+        ruleInfo.setActions(actions);
+
+        return ruleInfo;
+    }
+
+    @JsonIgnore
     @Override
     public Schema getSchema() {
         return Schema.of(

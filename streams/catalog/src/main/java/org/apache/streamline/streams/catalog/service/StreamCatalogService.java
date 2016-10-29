@@ -24,6 +24,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Function;
 import com.google.common.base.Joiner;
 import com.google.common.base.Optional;
+import com.google.common.base.Preconditions;
 import com.google.common.collect.Collections2;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
@@ -64,6 +65,7 @@ import org.apache.streamline.streams.catalog.processor.CustomProcessorInfo;
 import org.apache.streamline.streams.catalog.rule.RuleParser;
 import org.apache.streamline.streams.catalog.topology.ConfigField;
 import org.apache.streamline.streams.catalog.topology.TopologyComponentDefinition;
+import org.apache.streamline.streams.catalog.topology.component.TopologyComponentFactory;
 import org.apache.streamline.streams.catalog.topology.TopologyLayoutValidator;
 import org.apache.streamline.streams.catalog.topology.component.TopologyDagBuilder;
 import org.apache.streamline.streams.cluster.discovery.ServiceNodeDiscoverer;
@@ -81,6 +83,7 @@ import org.apache.streamline.streams.layout.exception.BadTopologyLayoutException
 import org.apache.streamline.streams.metrics.topology.TopologyMetrics;
 import org.apache.streamline.streams.rule.UDAF;
 import org.apache.streamline.streams.rule.UDAF2;
+
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang.StringUtils;
@@ -492,13 +495,11 @@ public class StreamCatalogService {
         return dao.find(NOTIFIER_INFO_NAMESPACE, params);
     }
 
-
     public NotifierInfo removeNotifierInfo(Long notifierId) {
         NotifierInfo notifierInfo = new NotifierInfo();
         notifierInfo.setId(notifierId);
         return dao.remove(new StorableKey(NOTIFIER_INFO_NAMESPACE, notifierInfo.getPrimaryKey()));
     }
-
 
     public NotifierInfo addOrUpdateNotifierInfo(Long id, NotifierInfo notifierInfo) {
         notifierInfo.setId(id);
@@ -506,7 +507,6 @@ public class StreamCatalogService {
         this.dao.addOrUpdate(notifierInfo);
         return notifierInfo;
     }
-
 
     public Collection<Topology> listTopologies() {
         return this.dao.list(TOPOLOGY_NAMESPACE);
@@ -580,6 +580,29 @@ public class StreamCatalogService {
         setUpClusterArtifacts(topology);
         setUpUdfJars(topology);
         topologyActions.deploy(getTopologyLayout(topology));
+    }
+
+    public Topology cloneTopology(Topology topology, String cloneName) throws Exception {
+        Preconditions.checkNotNull(topology);
+        Preconditions.checkNotNull(cloneName);
+
+        Topology clonedTopology = topology.getClone(cloneName);
+        addTopology(clonedTopology);
+
+        TopologyDag originalTopologyDag = topology.getTopologyDag();
+        TopologyDag clonedTopologyDag = new TopologyDag();
+        getFactory().copyDag(originalTopologyDag, clonedTopologyDag, clonedTopology.getId());
+        clonedTopology.setTopologyDag(clonedTopologyDag);
+
+        TopologyEditorMetadata topologyEditorMetadata = getTopologyEditorMetadata(topology.getId()).getClone();
+        topologyEditorMetadata.setTopologyId(clonedTopology.getId());
+        addTopologyEditorMetadata(topologyEditorMetadata);
+
+        return clonedTopology;
+    }
+
+    public TopologyComponentFactory getFactory() {
+        return topologyDagBuilder.getFactory();
     }
 
     private void setUpUdfJars(Topology topology) throws IOException {

@@ -45,6 +45,15 @@ public class TopologyEditorMetadata extends AbstractStorable {
         return timestamp;
     }
 
+    @JsonIgnore
+    public TopologyEditorMetadata getClone() {
+        TopologyEditorMetadata topologyEditorMetadata = new TopologyEditorMetadata();
+        topologyEditorMetadata.setData(data);
+
+        return topologyEditorMetadata;
+    }
+
+
     @Override
     @JsonIgnore
     public PrimaryKey getPrimaryKey() {
